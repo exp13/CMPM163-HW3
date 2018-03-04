@@ -1,0 +1,444 @@
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>SDFs</title>
+		<meta charset="utf-8">
+		<style>
+			body {
+			  	margin: 0px;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+
+	<div id="container"></div>
+
+	<script src="js/three.js"></script>
+
+	<script id="vertexShader" type="x-shader/x-vertex">
+
+		precision mediump float;
+
+		uniform mat4 modelMatrix, viewMatrix, projectionMatrix;
+
+		attribute vec3 position;
+
+		void main(){
+			
+
+			gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+		}
+
+	</script>
+
+	<script id="fragmentShader" type="x-shader/x-fragment">
+
+		precision mediump float;
+
+		uniform vec2 res;
+
+		uniform vec3 ambient;
+
+		uniform vec3 light1_pos;
+		uniform vec3 light2_pos;
+
+      	uniform vec3 light1_diffuse;
+      	uniform vec3 light2_diffuse;
+
+      	uniform vec3 light1_specular;
+      	uniform vec3 light2_specular;
+
+      	uniform float time;
+
+		varying vec3 wPos;
+
+		const float HOW_CLOSE = 0.001;
+		const float FURTHEST = 10.;
+		const int RAY_STEP_MAX = 100;
+
+		const vec3 eyePosition = vec3(0.,0.25,4.);
+
+		vec2 sdfBalloon(vec3 rayPos, vec3 p, float radius)
+		{
+			vec3 balloonPos = p;
+
+			float balloonRadius = radius;
+
+			float distanceToBalloon = length(rayPos - balloonPos);
+
+			float distanceToBalloonSurface = distanceToBalloon - balloonRadius;
+
+			float balloonID = 1.;
+
+			vec2 balloon = vec2(distanceToBalloonSurface, balloonID);
+
+			return balloon;
+		}
+
+		vec2 sdfEllipsoid( vec3 p, vec3 c, vec3 r )
+		{
+			p = p - c;
+		    float dist = (length( p/r ) - 1.0) * min(min(r.x,r.y),r.z);
+		    return vec2(dist, 1.);
+		}
+
+		vec2 sdfBox(vec3 rayPos, vec3 c, vec3 r)
+		{
+			vec3 boxPos = c;
+
+			//boxPos.x += sin(time/2000.)/4.;
+
+			vec3 boxSize = r;
+
+			vec3 adjustedRayPosition = rayPos - boxPos;
+
+			vec3 distanceVec = abs(adjustedRayPosition) - boxSize;
+			float maxDistance = max(distanceVec.x, max(distanceVec.y, distanceVec.z));
+			float distanceToBoxSurface = min(maxDistance, 0.0) + length(max(distanceVec, 0.0));
+
+			float boxID = 2.;
+
+			vec2 box = vec2(distanceToBoxSurface, boxID);
+
+			return box;
+		}
+
+		vec3 opTx( vec3 p)
+		{
+
+			float xRotate = .26+time/2000.;
+			float yRotate = .26+time/3000.;
+			float zRotate = .26+time/4000.;
+
+			mat4 rX;
+			rX[0] = vec4(1., 0., 0., 0.);
+			rX[1] = vec4(0., cos(xRotate), sin(xRotate), 0.);
+			rX[2] = vec4(0., -sin(xRotate), cos(xRotate), 0.);
+			rX[3] = vec4(1., 0., 0., 1.);
+
+			mat4 rY;
+			rY[0] = vec4(cos(yRotate), 0., -sin(yRotate), 0.);
+			rY[1] = vec4(0., 1., 0., 0.);
+			rY[2] = vec4(sin(yRotate), 0., cos(yRotate), 0.);
+			rY[3] = vec4(0., 0., 0., 1.);
+
+			mat4 rZ;
+			rZ[0] = vec4(cos(zRotate), sin(zRotate), 0., 0.);
+			rZ[1] = vec4(-sin(zRotate), cos(zRotate), 0., 0.);
+			rZ[2] = vec4(0., 0., 1., 0.);
+			rZ[3] = vec4(0., 0., 0., 1.);
+
+
+		    vec3 q = vec4(rZ*rY*rX*vec4(p,0.0)).xyz;
+
+			return q;
+		}
+
+		vec2 whichThingCloser(vec2 thing1, vec2 thing2)
+		{
+			vec2 closest;
+
+			if(thing1.x <= thing2.x)
+			{
+				closest = thing1;
+			}
+			else if(thing2.x < thing1.x)
+			{
+				closest = thing2;
+			}
+
+			return closest;
+		}
+
+		vec2 mapWorld(vec3 rayPos)
+		{
+			vec2 result;
+
+			vec2 ball = sdfBalloon(rayPos, vec3(0.), max(0.2, .55));
+			vec2 ball2 = sdfEllipsoid(opTx(rayPos), vec3(0.), vec3(.1));
+			vec2 ball2m = sdfBalloon(opTx(rayPos), vec3(0.4, 0., 0.), .25);
+			vec2 box = sdfBox((rayPos), vec3(0.), vec3(.4));
+
+			vec2 boxS1 = sdfBox(opTx(rayPos), vec3(0.3), vec3(.15));
+			vec2 boxS2 = sdfBox(opTx(rayPos), vec3(-0.3), vec3(.15));
+			vec2 boxS3 = sdfBox(opTx(rayPos), vec3(0.3, -.3, .3), vec3(.15));
+			vec2 boxS4 = sdfBox(opTx(rayPos), vec3(0.3, .3, -.3), vec3(.15));
+			vec2 boxS5 = sdfBox(opTx(rayPos), vec3(-0.3, -.3, .3), vec3(.15));
+			vec2 boxS6 = sdfBox(opTx(rayPos), vec3(-0.3, .3, -.3), vec3(.15));
+			vec2 boxS7 = sdfBox(opTx(rayPos), vec3(0.3, -.3, -.3), vec3(.15));
+			vec2 boxS8 = sdfBox(opTx(rayPos), vec3(-0.3, .3, .3), vec3(.15));
+
+			vec2 bbI = vec2(max(ball.x, -box.x), ball.y);
+			//bbI = vec2(max(bbI.x, -ball2m.x), ball.y);
+			bbI = vec2(max(bbI.x, -boxS1.x), ball.y);
+			bbI = vec2(max(bbI.x, -boxS2.x), ball.y);
+			bbI = vec2(max(bbI.x, -boxS3.x), ball.y);
+			bbI = vec2(max(bbI.x, -boxS4.x), ball.y);
+			bbI = vec2(max(bbI.x, -boxS5.x), ball.y);
+			bbI = vec2(max(bbI.x, -boxS6.x), ball.y);
+			bbI = vec2(max(bbI.x, -boxS7.x), ball.y);
+			bbI = vec2(max(bbI.x, -boxS8.x), ball.y);
+
+
+
+			result = whichThingCloser(bbI, ball2);
+
+
+			return result;
+		}
+
+		vec2 checkRayHit(vec3 eyeP, vec3 rayDir)
+		{
+			float distanceToSurface = HOW_CLOSE * 2.;
+
+			float totalDistTravByRay = 0.;
+
+			float finalDistTravByRay = -1.;
+
+			float finalID = -1.;
+
+			for(int i = 0; i < RAY_STEP_MAX; i++)
+			{
+				if(distanceToSurface < HOW_CLOSE) break;
+				if(totalDistTravByRay > FURTHEST) break;
+
+				vec3 currentRayPos = eyeP + rayDir * totalDistTravByRay;
+
+				vec2 worldDistID = mapWorld(currentRayPos);
+
+				float distanceToThings = worldDistID.x;
+				float idOfClosest = worldDistID.y;
+
+				distanceToSurface = distanceToThings;
+				finalID = idOfClosest;
+
+				totalDistTravByRay += distanceToThings;
+			}
+
+			if(totalDistTravByRay < FURTHEST){
+				finalDistTravByRay = totalDistTravByRay;
+			}
+
+			if(totalDistTravByRay > FURTHEST){
+				finalDistTravByRay = FURTHEST;
+				finalID = -1.;
+			}
+
+			return vec2(finalDistTravByRay, finalID);
+		}
+
+		vec3 getNormal(vec3 hitP)
+		{
+			vec3 tChangeX = vec3(0.001, 0.0, 0.0);
+			vec3 tChangeY = vec3(0.0 , 0.001, 0.0);
+			vec3 tChangeZ = vec3(0.0, 0.0, 0.001);
+
+			float upTinyChangeInX = mapWorld(hitP + tChangeX).x;
+			float downTinyChangeInX = mapWorld(hitP - tChangeX).x;
+
+			float tinyChangeInX = upTinyChangeInX - downTinyChangeInX;
+
+			float upTinyChangeInY = mapWorld(hitP + tChangeY).x;
+			float downTinyChangeInY = mapWorld(hitP - tChangeY).x;
+
+			float tinyChangeInY = upTinyChangeInY - downTinyChangeInY;
+
+			float upTinyChangeInZ = mapWorld(hitP + tChangeZ).x;
+			float downTinyChangeInZ = mapWorld(hitP - tChangeZ).x;
+
+			float tinyChangeInZ = upTinyChangeInZ - downTinyChangeInZ;
+
+			vec3 normal = vec3(tinyChangeInX, tinyChangeInY, tinyChangeInZ);
+
+			return normalize(normal);
+		}
+
+		vec4 colorWorld(vec2 rayHit, vec3 eyeP, vec3 rayDir)
+		{
+			vec4 color;
+			vec4 fragColor;
+			float spec_intensity = 32.;
+
+			if(rayHit.y < 0.0){
+				color = vec4(0.0,0.0,0.0, 1.0);
+			}else{
+
+				vec3 hitPos = eyeP + rayHit.x*rayDir;
+
+				vec3 normal = getNormal(hitPos);
+
+				vec3 V = normalize(-hitPos);
+
+				vec3 L1 = normalize(light1_pos - hitPos);
+				vec3 L2 = normalize(light2_pos - hitPos);
+
+				vec4 outColor1 = vec4(0.0);
+				vec4 outColor2 = vec4(0.0);
+
+				float diff1 = max(0.0, dot(normal, L1));
+				vec3 color1 = diff1 * light1_diffuse;
+
+				float diff2 = max(0.0, dot(normal, L2));
+				vec3 color2 = diff2 * light2_diffuse;
+
+				vec3 R1 = normalize(reflect(-L1, normal));
+				vec3 R2 = normalize(reflect(-L2, normal));
+
+				float spec1 = pow(max(dot(R1,V), 0.0), spec_intensity);
+				float spec2 = pow(max(dot(R2,V), 0.0), spec_intensity);
+
+				color1 += spec1 * light1_specular;
+				color2 += spec2 * light2_specular;
+
+				if(spec1 > 1.0){
+					outColor1 = vec4(light1_specular, 1.0);
+				}else{
+					outColor1 = clamp(vec4(color1, 1.0), 0.0, 1.0);
+				}
+
+				if(spec2 > 1.0){
+					outColor2 = vec4(light2_specular, 1.0);
+				}else{
+					outColor2 = clamp(vec4(color2, 1.0), 0.0, 1.0);
+				}
+
+				if(rayHit.y == 1.0){
+					color = vec4(0.0,0.0,0.0, 1.0);
+				}
+				else if(rayHit.y == 2.0){
+					color = vec4(0.0,0.0,0.0, 1.0);
+				}
+
+				fragColor = clamp(vec4(ambient, 1.0) + color + outColor1 + outColor2, 0.0, 1.0);
+			}
+
+			return fragColor;
+		}
+
+		vec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) 
+		{
+			vec2 xy = fragCoord - size / 2.0;
+			float z = size.y / tan(radians(fieldOfView) / 2.0);
+			return normalize(vec3(xy, -z));
+  		}
+
+		void main()
+		{
+
+			vec3 eyeRay = rayDirection(60., res, gl_FragCoord.xy);
+
+
+			vec2 rayHit = checkRayHit(eyePosition, eyeRay);
+
+			vec4 color = colorWorld(rayHit, eyePosition, eyeRay);
+
+			gl_FragColor = color;
+
+			//gl_FragColor = vec4(pos, 1.0);
+		}
+
+	</script>
+
+
+	<script>
+
+	var resX = window.innerWidth;
+	var resY = window.innerHeight;
+
+
+	var camera, renderer, scene, container;
+
+	var vs, fs, uniforms;
+
+	var planeMesh;
+
+	var pointLookingAt = new THREE.Vector3(0,0,0);
+
+
+	init();
+	render();
+
+	function init()
+	{
+
+		container = document.getElementById('container');
+		vs = document.getElementById('vertexShader').textContent;
+		fs = document.getElementById('fragmentShader').textContent;
+
+		camera = new THREE.OrthographicCamera(resX / -2, resX / 2, resY / 2, resY / -2, 1 , 1000);
+		camera.position.set(0,0,1);
+
+		// camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 2000);
+		// camera.position.set(0,0,10);
+
+		scene = new THREE.Scene();
+
+		var planeGeo = new THREE.PlaneGeometry(resX,resY);
+
+		var ambient = new THREE.Vector3(0.1, 0.1, 0.1);
+
+		var light1_pos = new THREE.Vector3(1.5, 1.7, 1.);
+		var light1_diffuse = new THREE.Vector3(1.0, 0.0, 1.0);
+		var light1_specular = new THREE.Vector3(1.0, 1.0, 1.0);
+
+		var light2_pos = new THREE.Vector3(-1.5, -1.6, 1.1);
+		var light2_diffuse = new THREE.Vector3(0.0, 1.0, 1.0);
+		var light2_specular = new THREE.Vector3(1.0, 1.0, 1.0);
+
+		uniforms = {
+			res: {type: "v2", value: new THREE.Vector2(resX, resY)},
+			light1_pos: { type: "v3", value: light1_pos },
+    		light1_diffuse: { type: "v3", value: light1_diffuse },
+    		light1_specular:  { type: "v3", value: light1_specular },
+    		light2_pos: { type: "v3", value: light2_pos },
+    		light2_diffuse: { type: "v3", value: light2_diffuse },
+    		light2_specular:  { type: "v3", value: light2_specular },
+    		ambient: { type: "v3", value: ambient },
+    		time: {type: "f", value: performance.now()}
+		}
+
+		var planeMat = new THREE.RawShaderMaterial({
+			uniforms: uniforms,
+			vertexShader: vs,
+			fragmentShader: fs
+		});
+
+		planeMesh = new THREE.Mesh(planeGeo, planeMat);
+		scene.add(planeMesh);
+
+		renderer = new THREE.WebGLRenderer();
+		renderer.setPixelRatio(window.devicePixelRatio);
+		renderer.setSize(resX,resY);
+
+		container.appendChild(renderer.domElement);
+		window.addEventListener( 'resize', onWindowResize, false );
+
+	}
+
+	function render()
+	{
+		requestAnimationFrame(render);
+
+		uniforms.time.value = performance.now();
+
+		renderer.render(scene, camera);
+	}
+
+	function onWindowResize() 
+	{
+
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+
+		renderer.setSize( window.innerWidth, window.innerHeight );
+
+	}
+
+
+	</script>
+
+
+	</body>
+</html>
