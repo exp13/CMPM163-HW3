@@ -58,7 +58,7 @@
 		const float FURTHEST = 10.;
 		const int RAY_STEP_MAX = 100;
 
-		const vec3 eyePosition = vec3(0.,0.25,4.);
+		const vec3 eyePosition = vec3(0.,-0.1,4.);
 
 		vec2 sdfBalloon(vec3 rayPos, vec3 p, float radius)
 		{
@@ -158,24 +158,66 @@
 
 			vec3 rot = vec3(time*.0002, time*.0003, time*.0004);
 
-			vec2 ball = sdfBalloon(rayPos, vec3(0.), max(0.2, .55));
-			vec2 ball2 = sdfEllipsoid(opTx(rayPos, rot), vec3(0.), vec3(.1));
-			vec2 ball2m = sdfBalloon(opTx(rayPos, rot), vec3(0.4, 0., 0.), .25);
-			vec2 box = sdfBox(opTx(rayPos,rot), vec3(0.), vec3(max(.1, abs(sin(time*.0002)*.39))));
+			vec2 ball = sdfBalloon(rayPos, vec3(0.), clamp(abs(sin(time*.0002)*.8), .1, .55));
+		
+			vec2 box = sdfBox(opTx(rayPos,rot), vec3(0.), vec3(clamp(abs(sin(time*.0002)*.8)-.1, -.1, .39)));
 
-			vec2 boxS1 = sdfBox(opTx(rayPos, rot), vec3(0.3), vec3(.15));
-			vec2 boxS2 = sdfBox(opTx(rayPos, rot), vec3(-0.3), vec3(.15));
-			vec2 boxS3 = sdfBox(opTx(rayPos, rot), vec3(0.3, -.3, .3), vec3(.15));
-			vec2 boxS4 = sdfBox(opTx(rayPos, rot), vec3(0.3, .3, -.3), vec3(.15));
-			vec2 boxS5 = sdfBox(opTx(rayPos, rot), vec3(-0.3, -.3, .3), vec3(.15));
-			vec2 boxS6 = sdfBox(opTx(rayPos, rot), vec3(-0.3, .3, -.3), vec3(.15));
-			vec2 boxS7 = sdfBox(opTx(rayPos, rot), vec3(0.3, -.3, -.3), vec3(.15));
-			vec2 boxS8 = sdfBox(opTx(rayPos, rot), vec3(-0.3, .3, .3), vec3(.15));
+			vec3 boxSrad = vec3(clamp(abs(sin(time*.0002-3.14/8.)*.8), -.1, .15));
+			vec2 boxS1 = sdfBox(opTx(rayPos, rot), vec3(0.3), boxSrad);
+			vec2 boxS2 = sdfBox(opTx(rayPos, rot), vec3(-0.3), boxSrad);
+			vec2 boxS3 = sdfBox(opTx(rayPos, rot), vec3(0.3, -.3, .3), boxSrad);
+			vec2 boxS4 = sdfBox(opTx(rayPos, rot), vec3(0.3, .3, -.3), boxSrad);
+			vec2 boxS5 = sdfBox(opTx(rayPos, rot), vec3(-0.3, -.3, .3), boxSrad);
+			vec2 boxS6 = sdfBox(opTx(rayPos, rot), vec3(-0.3, .3, -.3), boxSrad);
+			vec2 boxS7 = sdfBox(opTx(rayPos, rot), vec3(0.3, -.3, -.3), boxSrad);
+			vec2 boxS8 = sdfBox(opTx(rayPos, rot), vec3(-0.3, .3, .3), boxSrad);
 
-			vec2 boxClip = sdfBox(opTx(rayPos, rot), vec3(.0, .0, .0), vec3(.5));
+			vec2 boxClip = sdfBox(opTx(rayPos, rot), vec3(.0, .0, .0), vec3(.47));
+
+			float ballSrad = clamp(abs(sin(time*.0002)*.8), -.1, .2);
+			vec2 ballS1 = sdfBalloon(opTx(rayPos, rot), vec3(.4,.0,.0), ballSrad);
+			vec2 ballS2 = sdfBalloon(opTx(rayPos, rot), vec3(.0,.4,.0), ballSrad);
+			vec2 ballS3 = sdfBalloon(opTx(rayPos, rot), vec3(.0,.0,.4), ballSrad);
+			vec2 ballS4 = sdfBalloon(opTx(rayPos, rot), vec3(-.4,.0,.0), ballSrad);
+			vec2 ballS5 = sdfBalloon(opTx(rayPos, rot), vec3(.0,-.4,.0), ballSrad);
+			vec2 ballS6 = sdfBalloon(opTx(rayPos, rot), vec3(.0,.0,-.4), ballSrad);
+
+			vec3 ball1p = vec3(abs(sin(time*.0002+3.14/2.))+.1, 0., 0.);
+			vec3 ball2p = vec3(abs(sin(time*.0002+3.14/2.))*-1.-.1, 0., 0.);
+			vec3 ball3p = vec3(0., abs(sin(time*.0002+3.14/2.))+.1, 0.);
+			vec3 ball4p = vec3(0., abs(sin(time*.0002+3.14/2.))*-1.-.1, 0.);
+			vec3 ball5p = vec3(0., 0., abs(sin(time*.0002+3.14/2.))+.1);
+			vec3 ball6p = vec3(0., 0., abs(sin(time*.0002+3.14/2.))*-1.-.1);
+
+			vec3 ballRad1 = vec3(.1, abs(sin(time*.0002+3.14/2.))*.1+.01, abs(sin(time*.0002+3.14/2.))*.1+.01);
+			vec3 ballRad2 = vec3(abs(sin(time*.0002+3.14/2.))*.1+.01, abs(sin(time*.0002+3.14/2.))*.1+.01, .1);
+			vec3 ballRad3 = vec3(abs(sin(time*.0002+3.14/2.))*.1+.01, .1, abs(sin(time*.0002+3.14/2.))*.1+.01);
+
+			vec2 ball11 = sdfEllipsoid(opTx(rayPos, rot), ball1p, ballRad1);
+			vec2 ball21 = sdfEllipsoid(opTx(rayPos, rot), ball2p, ballRad1);
+			vec2 ball31 = sdfEllipsoid(opTx(rayPos, rot), ball3p, ballRad3);
+			vec2 ball41 = sdfEllipsoid(opTx(rayPos, rot), ball4p, ballRad3);
+			vec2 ball51 = sdfEllipsoid(opTx(rayPos, rot), ball5p, ballRad2);
+			vec2 ball61 = sdfEllipsoid(opTx(rayPos, rot), ball6p, ballRad2);
+
+			vec2 ball12 = sdfEllipsoid(opTx(rayPos, rot), ball1p, ballRad3);
+			vec2 ball22 = sdfEllipsoid(opTx(rayPos, rot), ball2p, ballRad3);
+			vec2 ball32 = sdfEllipsoid(opTx(rayPos, rot), ball3p, ballRad2);
+			vec2 ball42 = sdfEllipsoid(opTx(rayPos, rot), ball4p, ballRad2);
+			vec2 ball52 = sdfEllipsoid(opTx(rayPos, rot), ball5p, ballRad1);
+			vec2 ball62 = sdfEllipsoid(opTx(rayPos, rot), ball6p, ballRad1);
+
+			vec2 ball13 = sdfEllipsoid(opTx(rayPos, rot), ball1p, ballRad2);
+			vec2 ball23 = sdfEllipsoid(opTx(rayPos, rot), ball2p, ballRad2);
+			vec2 ball33 = sdfEllipsoid(opTx(rayPos, rot), ball3p, ballRad1);
+			vec2 ball43 = sdfEllipsoid(opTx(rayPos, rot), ball4p, ballRad1);
+			vec2 ball53 = sdfEllipsoid(opTx(rayPos, rot), ball5p, ballRad3);
+			vec2 ball63 = sdfEllipsoid(opTx(rayPos, rot), ball6p, ballRad3);
+
+			// make shape
 
 			vec2 bbI = vec2(max(ball.x, -box.x), ball.y);
-			//bbI = vec2(max(bbI.x, -ball2m.x), ball.y);
+
 			bbI = vec2(max(bbI.x, -boxS1.x), ball.y);
 			bbI = vec2(max(bbI.x, -boxS2.x), ball.y);
 			bbI = vec2(max(bbI.x, -boxS3.x), ball.y);
@@ -187,7 +229,26 @@
 
 			bbI = vec2(max(bbI.x, boxClip.x), ball.y);
 
-			result = whichThingCloser(bbI, ball2);
+			bbI = vec2(max(bbI.x, -ballS1.x), ball.y);
+			bbI = vec2(max(bbI.x, -ballS2.x), ball.y);
+			bbI = vec2(max(bbI.x, -ballS3.x), ball.y);
+			bbI = vec2(max(bbI.x, -ballS4.x), ball.y);
+			bbI = vec2(max(bbI.x, -ballS5.x), ball.y);
+			bbI = vec2(max(bbI.x, -ballS6.x), ball.y);
+
+			vec2 ball1 = vec2(min(min(ball11.x, ball12.x), ball13.x), ball.y);
+			vec2 ball2 = vec2(min(min(ball21.x, ball22.x), ball23.x), ball.y);
+			vec2 ball3 = vec2(min(min(ball31.x, ball32.x), ball33.x), ball.y);
+			vec2 ball4 = vec2(min(min(ball41.x, ball42.x), ball43.x), ball.y);
+			vec2 ball5 = vec2(min(min(ball51.x, ball52.x), ball53.x), ball.y);
+			vec2 ball6 = vec2(min(min(ball61.x, ball62.x), ball63.x), ball.y);		
+
+			result = whichThingCloser(bbI, ball1);
+			result = whichThingCloser(result, ball2);
+			result = whichThingCloser(result, ball3);
+			result = whichThingCloser(result, ball4);
+			result = whichThingCloser(result, ball5);
+			result = whichThingCloser(result, ball6);
 
 
 			return result;
@@ -426,6 +487,15 @@
 		requestAnimationFrame(render);
 
 		uniforms.time.value = performance.now();
+
+		uniforms.light1_diffuse.value.x = Math.abs(Math.sin(performance.now()*.0002));
+		uniforms.light1_diffuse.value.y = Math.abs(Math.sin(performance.now()*.0002+3.14/2.));
+		uniforms.light1_diffuse.value.z = Math.abs(Math.sin(performance.now()*.0002));
+
+		uniforms.light2_diffuse.value.x = Math.abs(Math.sin(performance.now()*.0002));
+		uniforms.light2_diffuse.value.y = Math.abs(Math.sin(performance.now()*.0002));
+		uniforms.light2_diffuse.value.z = Math.abs(Math.sin(performance.now()*.0002+3.14/2.));
+
 
 		renderer.render(scene, camera);
 	}
