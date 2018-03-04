@@ -105,12 +105,12 @@
 			return box;
 		}
 
-		vec3 opTx( vec3 p)
+		vec3 opTx( vec3 p, vec3 rot)
 		{
 
-			float xRotate = .26+time/2000.;
-			float yRotate = .26+time/3000.;
-			float zRotate = .26+time/4000.;
+			float xRotate = rot.x;
+			float yRotate = rot.y;
+			float zRotate = rot.z;
 
 			mat4 rX;
 			rX[0] = vec4(1., 0., 0., 0.);
@@ -156,19 +156,23 @@
 		{
 			vec2 result;
 
-			vec2 ball = sdfBalloon(rayPos, vec3(0.), max(0.2, .55));
-			vec2 ball2 = sdfEllipsoid(opTx(rayPos), vec3(0.), vec3(.1));
-			vec2 ball2m = sdfBalloon(opTx(rayPos), vec3(0.4, 0., 0.), .25);
-			vec2 box = sdfBox((rayPos), vec3(0.), vec3(.4));
+			vec3 rot = vec3(time*.0002, time*.0003, time*.0004);
 
-			vec2 boxS1 = sdfBox(opTx(rayPos), vec3(0.3), vec3(.15));
-			vec2 boxS2 = sdfBox(opTx(rayPos), vec3(-0.3), vec3(.15));
-			vec2 boxS3 = sdfBox(opTx(rayPos), vec3(0.3, -.3, .3), vec3(.15));
-			vec2 boxS4 = sdfBox(opTx(rayPos), vec3(0.3, .3, -.3), vec3(.15));
-			vec2 boxS5 = sdfBox(opTx(rayPos), vec3(-0.3, -.3, .3), vec3(.15));
-			vec2 boxS6 = sdfBox(opTx(rayPos), vec3(-0.3, .3, -.3), vec3(.15));
-			vec2 boxS7 = sdfBox(opTx(rayPos), vec3(0.3, -.3, -.3), vec3(.15));
-			vec2 boxS8 = sdfBox(opTx(rayPos), vec3(-0.3, .3, .3), vec3(.15));
+			vec2 ball = sdfBalloon(rayPos, vec3(0.), max(0.2, .55));
+			vec2 ball2 = sdfEllipsoid(opTx(rayPos, rot), vec3(0.), vec3(.1));
+			vec2 ball2m = sdfBalloon(opTx(rayPos, rot), vec3(0.4, 0., 0.), .25);
+			vec2 box = sdfBox(opTx(rayPos,rot), vec3(0.), vec3(max(.1, abs(sin(time*.0002)*.39))));
+
+			vec2 boxS1 = sdfBox(opTx(rayPos, rot), vec3(0.3), vec3(.15));
+			vec2 boxS2 = sdfBox(opTx(rayPos, rot), vec3(-0.3), vec3(.15));
+			vec2 boxS3 = sdfBox(opTx(rayPos, rot), vec3(0.3, -.3, .3), vec3(.15));
+			vec2 boxS4 = sdfBox(opTx(rayPos, rot), vec3(0.3, .3, -.3), vec3(.15));
+			vec2 boxS5 = sdfBox(opTx(rayPos, rot), vec3(-0.3, -.3, .3), vec3(.15));
+			vec2 boxS6 = sdfBox(opTx(rayPos, rot), vec3(-0.3, .3, -.3), vec3(.15));
+			vec2 boxS7 = sdfBox(opTx(rayPos, rot), vec3(0.3, -.3, -.3), vec3(.15));
+			vec2 boxS8 = sdfBox(opTx(rayPos, rot), vec3(-0.3, .3, .3), vec3(.15));
+
+			vec2 boxClip = sdfBox(opTx(rayPos, rot), vec3(.0, .0, .0), vec3(.5));
 
 			vec2 bbI = vec2(max(ball.x, -box.x), ball.y);
 			//bbI = vec2(max(bbI.x, -ball2m.x), ball.y);
@@ -181,7 +185,7 @@
 			bbI = vec2(max(bbI.x, -boxS7.x), ball.y);
 			bbI = vec2(max(bbI.x, -boxS8.x), ball.y);
 
-
+			bbI = vec2(max(bbI.x, boxClip.x), ball.y);
 
 			result = whichThingCloser(bbI, ball2);
 
