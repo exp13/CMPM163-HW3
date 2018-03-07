@@ -189,9 +189,9 @@
 			vec3 ball5p = vec3(0., 0., abs(sin(time*.0002+3.14/2.))+.1);
 			vec3 ball6p = vec3(0., 0., abs(sin(time*.0002+3.14/2.))*-1.-.1);
 
-			vec3 ballRad1 = vec3(.1, abs(sin(time*.0002+3.14/2.))*.1+.01, abs(sin(time*.0002+3.14/2.))*.1+.01);
-			vec3 ballRad2 = vec3(abs(sin(time*.0002+3.14/2.))*.1+.01, abs(sin(time*.0002+3.14/2.))*.1+.01, .1);
-			vec3 ballRad3 = vec3(abs(sin(time*.0002+3.14/2.))*.1+.01, .1, abs(sin(time*.0002+3.14/2.))*.1+.01);
+			vec3 ballRad1 = vec3(.17, abs(sin(time*.0002+3.14/2.))*.2+.01, abs(sin(time*.0002+3.14/2.))*.2+.01);
+			vec3 ballRad2 = vec3(abs(sin(time*.0002+3.14/2.))*.2+.01, abs(sin(time*.0002+3.14/2.))*.2+.01, .17);
+			vec3 ballRad3 = vec3(abs(sin(time*.0002+3.14/2.))*.2+.01, .17, abs(sin(time*.0002+3.14/2.))*.2+.01);
 
 			vec2 ball11 = sdfEllipsoid(opTx(rayPos, rot), ball1p, ballRad1);
 			vec2 ball21 = sdfEllipsoid(opTx(rayPos, rot), ball2p, ballRad1);
@@ -327,7 +327,7 @@
 			float spec_intensity = 32.;
 
 			if(rayHit.y < 0.0){
-				fragColor = vec4(0.,0.,0., 1.0);
+				fragColor = vec4(0.15,0.15,0.15, 1.0);
 			}else{
 
 				vec3 hitPos = eyeP + rayHit.x*rayDir;
@@ -338,6 +338,9 @@
 
 				vec3 L1 = normalize(light1_pos - hitPos);
 				vec3 L2 = normalize(light2_pos - hitPos);
+
+				vec2 S1 = checkRayHit(hitPos+.2*L1, L1);
+				vec2 S2 = checkRayHit(hitPos+.2*L2, L2);
 
 				vec4 outColor1 = vec4(0.0);
 				vec4 outColor2 = vec4(0.0);
@@ -357,6 +360,8 @@
 				color1 += spec1 * light1_specular;
 				color2 += spec2 * light2_specular;
 
+			
+
 				if(spec1 > 1.0){
 					outColor1 = vec4(light1_specular, 1.0);
 				}else{
@@ -370,11 +375,15 @@
 				}
 
 				if(rayHit.y == 1.0){
-					color = vec4(0.0,0.0,0.0, 1.0);
+					color = vec4(0.0,0.0,0.0, 0.0);
 				}
 				else if(rayHit.y == 2.0){
-					color = vec4(0.0,0.0,0.0, 1.0);
+					color = vec4(0.0,0.0,0.0, 0.0);
 				}
+
+				if(S1.x < FURTHEST) outColor1 = vec4(0.0,0.0,0.0, diff1);
+				if(S2.x < FURTHEST) outColor2 = vec4(0.0,0.0,0.0, diff2);
+
 
 				fragColor = clamp(vec4(ambient, 1.0) + color + outColor1 + outColor2, 0.0, 1.0);
 			}
@@ -444,11 +453,11 @@
 
 		var ambient = new THREE.Vector3(0.1, 0.1, 0.1);
 
-		var light1_pos = new THREE.Vector3(1.5, 1.7, 1.);
+		var light1_pos = new THREE.Vector3(1.5, 1.7, 1.5);
 		var light1_diffuse = new THREE.Vector3(1.0, 0.0, 1.0);
 		var light1_specular = new THREE.Vector3(1.0, 1.0, 1.0);
 
-		var light2_pos = new THREE.Vector3(-1.5, -1.6, 1.1);
+		var light2_pos = new THREE.Vector3(-1.5, -1.6, 1.5);
 		var light2_diffuse = new THREE.Vector3(0.0, 1.0, 1.0);
 		var light2_specular = new THREE.Vector3(1.0, 1.0, 1.0);
 
@@ -495,6 +504,9 @@
 		uniforms.light2_diffuse.value.x = Math.abs(Math.sin(performance.now()*.0002));
 		uniforms.light2_diffuse.value.y = Math.abs(Math.sin(performance.now()*.0002));
 		uniforms.light2_diffuse.value.z = Math.abs(Math.sin(performance.now()*.0002+3.14/2.));
+
+		// uniforms.light1_pos.value.x = (Math.sin(performance.now()*.0009));
+		// uniforms.light2_pos.value.x = (Math.sin(performance.now()*.0008));
 
 
 		renderer.render(scene, camera);
